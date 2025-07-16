@@ -2387,12 +2387,85 @@ function createLoanForBorrower(borrowerId) {
 }
 
 // Additional functions for loans interface
-function viewLoanDetails(loanId) {
-    showAlert('Loan details view will be implemented soon', 'info');
+async function viewLoanDetails(loanId) {
+    try {
+        const response = await apiCall(`/loans/${loanId}`);
+        const loan = response.loan;
+        const borrower = allBorrowersForLoans.find(b => b.id === loan.borrower_id);
+
+        const detailsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-user me-2"></i>Borrower Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>Name:</th><td>${borrower ? borrower.name : 'Unknown'}</td></tr>
+                        <tr><th>Phone:</th><td>${borrower ? borrower.phone : 'N/A'}</td></tr>
+                        <tr><th>Address:</th><td>${borrower ? borrower.address : 'N/A'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-handshake me-2"></i>Loan Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>ID:</th><td>${loan.id}</td></tr>
+                        <tr><th>Status:</th><td><span class="badge status-${loan.status}">${loan.status}</span></td></tr>
+                        <tr><th>Principal:</th><td>${formatCurrency(loan.principal_amount)}</td></tr>
+                        <tr><th>Interest:</th><td>${loan.interest_rate}% (${formatCurrency(loan.interest_amount)})</td></tr>
+                        <tr><th>Expenses:</th><td>${formatCurrency(loan.expenses)}</td></tr>
+                        <tr><th>Total:</th><td>${formatCurrency(loan.total_amount)}</td></tr>
+                        <tr><th>Outstanding:</th><td>${formatCurrency(loan.outstanding_balance)}</td></tr>
+                        <tr><th>Start Date:</th><td>${formatDate(loan.start_date)}</td></tr>
+                        <tr><th>End Date:</th><td>${formatDate(loan.expected_end_date)}</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('loanDetails').innerHTML = detailsHtml;
+
+        const modal = new bootstrap.Modal(document.getElementById('viewLoanModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Failed to load loan details:', error);
+        showAlert('Failed to load loan details: ' + error.message, 'danger');
+    }
 }
 
-function viewLoanSchedule(loanId) {
-    showAlert('Loan schedule view will be implemented soon', 'info');
+async function viewLoanSchedule(loanId) {
+    try {
+        const response = await apiCall(`/loans/${loanId}/schedule`);
+        const schedule = response.schedule;
+
+        const detailsHtml = `
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Date</th>
+                        <th>Expected Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${schedule.map(item => `
+                        <tr>
+                            <td>${item.day}</td>
+                            <td>${formatDate(item.date)}</td>
+                            <td>${formatCurrency(item.expected_amount)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        document.getElementById('loanScheduleDetails').innerHTML = detailsHtml;
+
+        const modal = new bootstrap.Modal(document.getElementById('viewLoanScheduleModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Failed to load loan schedule:', error);
+        showAlert('Failed to load loan schedule: ' + error.message, 'danger');
+    }
 }
 
 function recordLoanPayment(loanId) {

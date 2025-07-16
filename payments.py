@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
+from loans import Loan
 # Model imports will be resolved through circular imports
 from auth import account_officer_required
 from datetime import datetime, date
