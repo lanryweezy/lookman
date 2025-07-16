@@ -1,7 +1,7 @@
 from .user import db, User
-from .borrower import Borrower
-from .loan import Loan
-from .payment import Payment
+from .borrowers import Borrower
+from .loans import Loan
+from .payments import Payment
 from .salary import SalaryCalculation
 from .settings import SystemSetting
 

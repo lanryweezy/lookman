@@ -358,8 +358,6 @@ function showAddBorrowerModal() {
 async function saveBorrower() {
     try {
         const name = document.getElementById('borrowerName').value.trim();
-        const phone = document.getElementById('borrowerPhone').value.trim();
-        const address = document.getElementById('borrowerAddress').value.trim();
         
         // Validation
         if (!name) {
@@ -374,8 +372,32 @@ async function saveBorrower() {
         
         const borrowerData = {
             name: name,
-            phone: phone || null,
-            address: address || null
+            phone: document.getElementById('borrowerPhone').value.trim(),
+            address: document.getElementById('borrowerAddress').value.trim(),
+            email: document.getElementById('borrowerEmail').value.trim(),
+            date_of_birth: document.getElementById('borrowerDateOfBirth').value,
+            city: document.getElementById('borrowerCity').value.trim(),
+            state: document.getElementById('borrowerState').value.trim(),
+            marital_status: document.getElementById('borrowerMaritalStatus').value.trim(),
+            bvn: document.getElementById('borrowerBvn').value.trim(),
+            nin: document.getElementById('borrowerNin').value.trim(),
+            primary_id_type: document.getElementById('borrowerPrimaryIdType').value.trim(),
+            primary_id_number: document.getElementById('borrowerPrimaryIdNumber').value.trim(),
+            employment_type: document.getElementById('borrowerEmploymentType').value.trim(),
+            employer_name: document.getElementById('borrowerEmployerName').value.trim(),
+            job_title: document.getElementById('borrowerJobTitle').value.trim(),
+            work_address: document.getElementById('borrowerWorkAddress').value.trim(),
+            monthly_income: document.getElementById('borrowerMonthlyIncome').value,
+            employment_start_date: document.getElementById('borrowerEmploymentStartDate').value,
+            business_name: document.getElementById('borrowerBusinessName').value.trim(),
+            business_registration_number: document.getElementById('borrowerBusinessRegistrationNumber').value.trim(),
+            business_address: document.getElementById('borrowerBusinessAddress').value.trim(),
+            business_type: document.getElementById('borrowerBusinessType').value.trim(),
+            annual_revenue: document.getElementById('borrowerAnnualRevenue').value,
+            bank_name: document.getElementById('borrowerBankName').value.trim(),
+            account_number: document.getElementById('borrowerAccountNumber').value.trim(),
+            account_name: document.getElementById('borrowerAccountName').value.trim(),
+            account_type: document.getElementById('borrowerAccountType').value.trim(),
         };
         
         const response = await apiCall('/borrowers', {
@@ -812,7 +834,17 @@ async function saveLoan() {
             interest_rate: interestRate,
             expenses: expenses,
             loan_duration_days: durationDays,
-            start_date: startDate
+            start_date: startDate,
+            loan_purpose: document.getElementById('loanPurpose').value,
+            loan_term: document.getElementById('loanTerm').value,
+            has_collateral: document.getElementById('hasCollateral').checked,
+            collateral_type: document.getElementById('collateralType').value,
+            collateral_value: document.getElementById('collateralValue').value,
+            collateral_description: document.getElementById('collateralDescription').value,
+            guarantor_name: document.getElementById('guarantorName').value,
+            guarantor_phone: document.getElementById('guarantorPhone').value,
+            guarantor_address: document.getElementById('guarantorAddress').value,
+            guarantor_relationship: document.getElementById('guarantorRelationship').value,
         };
         
         const response = await apiCall('/loans', {
