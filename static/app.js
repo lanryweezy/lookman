@@ -839,13 +839,16 @@ async function saveLoan() {
             loan_term: document.getElementById('loanTerm').value,
             has_collateral: document.getElementById('hasCollateral').checked,
             collateral_type: document.getElementById('collateralType').value,
-            collateral_value: document.getElementById('collateralValue').value,
             collateral_description: document.getElementById('collateralDescription').value,
             guarantor_name: document.getElementById('guarantorName').value,
             guarantor_phone: document.getElementById('guarantorPhone').value,
             guarantor_address: document.getElementById('guarantorAddress').value,
             guarantor_relationship: document.getElementById('guarantorRelationship').value,
         };
+
+        if (loanData.has_collateral) {
+            loanData.collateral_value = document.getElementById('collateralValue').value;
+        }
         
         const response = await apiCall('/loans', {
             method: 'POST',

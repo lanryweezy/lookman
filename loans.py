@@ -103,6 +103,8 @@ def create_loan():
         # Add optional fields
         for field in data:
             if hasattr(new_loan, field) and field not in ['borrower_id', 'principal_amount', 'interest_rate', 'expenses', 'loan_duration_days', 'start_date']:
+                if field == 'collateral_value' and not data.get('has_collateral'):
+                    continue
                 setattr(new_loan, field, data[field])
 
         # Calculate loan amounts
