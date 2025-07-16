@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory
 from flask_login import LoginManager
 from flask_cors import CORS
+from flask_migrate import Migrate
 from user import db, User, user_bp
 from borrowers import Borrower, borrowers_bp
 from loans import Loan, loans_bp
@@ -17,7 +18,6 @@ from admin import admin_bp
 from automation import automation_bp
 from reports import reports_bp
 from profile import profile_bp
-from user_profile import user_profile_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'lookman-loan-management-secret-key-2024'
@@ -46,12 +46,12 @@ app.register_blueprint(automation_bp, url_prefix='/api/automation')
 app.register_blueprint(salary_bp, url_prefix='/api/salary')
 app.register_blueprint(reports_bp, url_prefix='/api/reports')
 app.register_blueprint(profile_bp, url_prefix='/api/profile')
-app.register_blueprint(user_profile_bp, url_prefix='/api/user-profile')
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # Create tables and initialize default data
 with app.app_context():

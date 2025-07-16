@@ -66,6 +66,7 @@ def create_loan():
             return jsonify({'error': 'Start date is required'}), 400
         
         # Validate borrower exists and user has permission
+        from borrowers import Borrower
         borrower = Borrower.query.get_or_404(borrower_id)
         if not current_user.is_admin() and borrower.created_by != current_user.id:
             return jsonify({'error': 'Access denied to this borrower'}), 403
@@ -99,6 +100,11 @@ def create_loan():
             start_date=start_date
         )
         
+        # Add optional fields
+        for field in data:
+            if hasattr(new_loan, field) and field not in ['borrower_id', 'principal_amount', 'interest_rate', 'expenses', 'loan_duration_days', 'start_date']:
+                setattr(new_loan, field, data[field])
+
         # Calculate loan amounts
         new_loan.calculate_interest()
         new_loan.calculate_total_amount()
@@ -298,6 +304,22 @@ class Loan(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # Loan Application Details
+    loan_purpose = db.Column(db.String(100))
+    loan_term = db.Column(db.Integer)  # in months
+
+    # Collateral Information
+    has_collateral = db.Column(db.Boolean, default=False)
+    collateral_type = db.Column(db.String(50))
+    collateral_value = db.Column(db.Numeric(15, 2))
+    collateral_description = db.Column(db.Text)
+
+    # Guarantor Information
+    guarantor_name = db.Column(db.String(100))
+    guarantor_phone = db.Column(db.String(20))
+    guarantor_address = db.Column(db.Text)
+    guarantor_relationship = db.Column(db.String(50))
+
     # Relationships
     payments = db.relationship('Payment', backref='loan', lazy=True, cascade='all, delete-orphan')
     

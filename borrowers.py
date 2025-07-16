@@ -33,8 +33,6 @@ def create_borrower():
     try:
         data = request.get_json()
         name = data.get('name')
-        phone = data.get('phone')
-        address = data.get('address')
         
         # Validation
         if not name:
@@ -46,11 +44,14 @@ def create_borrower():
         # Create new borrower
         new_borrower = Borrower(
             name=name.strip(),
-            phone=phone.strip() if phone else None,
-            address=address.strip() if address else None,
             created_by=current_user.id
         )
         
+        # Update optional fields
+        for field in data:
+            if hasattr(new_borrower, field) and field not in ['name', 'created_by']:
+                setattr(new_borrower, field, data[field])
+
         db.session.add(new_borrower)
         db.session.commit()
         
@@ -96,16 +97,9 @@ def update_borrower(borrower_id):
         data = request.get_json()
         
         # Update fields if provided
-        if 'name' in data:
-            if not data['name'] or len(data['name'].strip()) < 2:
-                return jsonify({'error': 'Borrower name must be at least 2 characters long'}), 400
-            borrower.name = data['name'].strip()
-        
-        if 'phone' in data:
-            borrower.phone = data['phone'].strip() if data['phone'] else None
-        
-        if 'address' in data:
-            borrower.address = data['address'].strip() if data['address'] else None
+        for field in data:
+            if hasattr(borrower, field) and field not in ['id', 'created_by', 'created_at']:
+                setattr(borrower, field, data[field])
         
         borrower.updated_at = datetime.utcnow()
         db.session.commit()
@@ -179,6 +173,41 @@ class Borrower(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # Personal Information
+    date_of_birth = db.Column(db.Date)
+    email = db.Column(db.String(100))
+    city = db.Column(db.String(50))
+    state = db.Column(db.String(50))
+    country = db.Column(db.String(50), default='Nigeria')
+    marital_status = db.Column(db.String(50))
+
+    # Identification
+    bvn = db.Column(db.String(11))  # Bank Verification Number
+    nin = db.Column(db.String(11))  # National Identification Number
+    primary_id_type = db.Column(db.String(50))
+    primary_id_number = db.Column(db.String(50))
+
+    # Employment Information
+    employment_type = db.Column(db.String(50))
+    employer_name = db.Column(db.String(100))
+    job_title = db.Column(db.String(100))
+    work_address = db.Column(db.Text)
+    monthly_income = db.Column(db.Numeric(15, 2))
+    employment_start_date = db.Column(db.Date)
+
+    # Business Information (for self-employed)
+    business_name = db.Column(db.String(100))
+    business_registration_number = db.Column(db.String(50))  # CAC number
+    business_address = db.Column(db.Text)
+    business_type = db.Column(db.String(100))
+    annual_revenue = db.Column(db.Numeric(15, 2))
+
+    # Banking Information
+    bank_name = db.Column(db.String(100))
+    account_number = db.Column(db.String(10))
+    account_name = db.Column(db.String(100))
+    account_type = db.Column(db.String(20))
+
     # Relationships
     loans = db.relationship('Loan', backref='borrower', lazy=True)
     
@@ -190,7 +219,32 @@ class Borrower(db.Model):
             'address': self.address,
             'created_by': self.created_by,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
+            'email': self.email,
+            'city': self.city,
+            'state': self.state,
+            'country': self.country,
+            'marital_status': self.marital_status,
+            'bvn': self.bvn,
+            'nin': self.nin,
+            'primary_id_type': self.primary_id_type,
+            'primary_id_number': self.primary_id_number,
+            'employment_type': self.employment_type,
+            'employer_name': self.employer_name,
+            'job_title': self.job_title,
+            'work_address': self.work_address,
+            'monthly_income': float(self.monthly_income) if self.monthly_income else None,
+            'employment_start_date': self.employment_start_date.isoformat() if self.employment_start_date else None,
+            'business_name': self.business_name,
+            'business_registration_number': self.business_registration_number,
+            'business_address': self.business_address,
+            'business_type': self.business_type,
+            'annual_revenue': float(self.annual_revenue) if self.annual_revenue else None,
+            'bank_name': self.bank_name,
+            'account_number': self.account_number,
+            'account_name': self.account_name,
+            'account_type': self.account_type,
         }
     
     def __repr__(self):
