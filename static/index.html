@@ -53,23 +53,16 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                    <li class="nav-item">
+                        <a class="nav-link" href="user_profile.html">
                             <i class="fas fa-user-circle me-1"></i>
                             <span id="currentUserName">User</span>
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="showSection('profile')">
-                                <i class="fas fa-user me-2"></i>Profile
-                            </a></li>
-                            <li><a class="dropdown-item" href="user_profile.html">
-                                <i class="fas fa-user-cog me-2"></i>Profile Management
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="logout()">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </a></li>
-                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -734,164 +727,11 @@
             </div>
         </div>
 
-        <div id="reportsSection" class="content-section" style="display: none;">
-            <div class="row">
-                <div class="col-12">
-                    <h2><i class="fas fa-chart-bar me-2"></i>Reports</h2>
-                </div>
-            </div>
-            
-            <!-- Report Types Selection -->
-            <div class="row mb-4">
-                <div class="col-md-3 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
-                            <h5>Daily Collections</h5>
-                            <p class="text-muted">View daily payment collections and performance</p>
-                            <button class="btn btn-primary" onclick="showDailyCollectionsReport()">
-                                Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                            <h5>Outstanding Loans</h5>
-                            <p class="text-muted">View all outstanding and overdue loans</p>
-                            <button class="btn btn-warning" onclick="showOutstandingLoansReport()">
-                                Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
-                            <h5>Profit & Loss</h5>
-                            <p class="text-muted">Financial performance and profit analysis</p>
-                            <button class="btn btn-success" onclick="showProfitLossReport()">
-                                Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-user-chart fa-3x text-info mb-3"></i>
-                            <h5>Performance Report</h5>
-                            <p class="text-muted">Staff performance and loan metrics</p>
-                            <button class="btn btn-info" onclick="showPerformanceReport()">
-                                Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Report Filters -->
-            <div id="reportFilters" class="card mb-4" style="display: none;">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Report Filters</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label for="reportStartDate" class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="reportStartDate">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="reportEndDate" class="form-label">End Date</label>
-                            <input type="date" class="form-control" id="reportEndDate">
-                        </div>
-                        <div class="col-md-3" id="reportUserFilterDiv" style="display: none;">
-                            <label for="reportUserFilter" class="form-label">User</label>
-                            <select class="form-select" id="reportUserFilter">
-                                <option value="">All Users</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="d-grid">
-                                <button class="btn btn-primary" onclick="generateReport()">
-                                    <i class="fas fa-play me-2"></i>Generate
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Report Results -->
-            <div id="reportResults" class="card" style="display: none;">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i><span id="reportTitle">Report Results</span></h5>
-                    <div>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="exportReport()">
-                            <i class="fas fa-download me-1"></i>Export
-                        </button>
-                        <button class="btn btn-outline-primary btn-sm" onclick="printReport()">
-                            <i class="fas fa-print me-1"></i>Print
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body" id="reportContent">
-                    <!-- Report content will be loaded here -->
-                </div>
-            </div>
-            
-            <!-- Quick Stats Dashboard -->
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Quick Stats</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h4 class="text-primary" id="quickStatsLoans">0</h4>
-                                    <small class="text-muted">Total Loans</small>
-                                </div>
-                                <div class="col-6">
-                                    <h4 class="text-success" id="quickStatsCollections">₦0</h4>
-                                    <small class="text-muted">Total Collections</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>This Month</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col-6">
-                                    <h4 class="text-info" id="monthLoans">0</h4>
-                                    <small class="text-muted">New Loans</small>
-                                </div>
-                                <div class="col-6">
-                                    <h4 class="text-warning" id="monthCollections">₦0</h4>
-                                    <small class="text-muted">Collections</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="profileSection" class="content-section" style="display: none;">
+        <div id="borrower-profilesSection" class="content-section" style="display: none;">
             <div class="row">
                 <div class="col-12">
                     <h2 class="mb-4">
-                        <i class="fas fa-user me-2"></i>Profile Management
+                        <i class="fas fa-id-card me-2"></i>Borrower Profiles
                     </h2>
                 </div>
             </div>
@@ -1443,6 +1283,160 @@
                 </div>
             </div>
         </div>
+
+        <div id="reportsSection" class="content-section" style="display: none;">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Reports</h2>
+                </div>
+            </div>
+
+            <!-- Report Types Selection -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
+                            <h5>Daily Collections</h5>
+                            <p class="text-muted">View daily payment collections and performance</p>
+                            <button class="btn btn-primary" onclick="showDailyCollectionsReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                            <h5>Outstanding Loans</h5>
+                            <p class="text-muted">View all outstanding and overdue loans</p>
+                            <button class="btn btn-warning" onclick="showOutstandingLoansReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                            <h5>Profit & Loss</h5>
+                            <p class="text-muted">Financial performance and profit analysis</p>
+                            <button class="btn btn-success" onclick="showProfitLossReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-chart fa-3x text-info mb-3"></i>
+                            <h5>Performance Report</h5>
+                            <p class="text-muted">Staff performance and loan metrics</p>
+                            <button class="btn btn-info" onclick="showPerformanceReport()">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Filters -->
+            <div id="reportFilters" class="card mb-4" style="display: none;">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Report Filters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="reportStartDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="reportStartDate">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="reportEndDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="reportEndDate">
+                        </div>
+                        <div class="col-md-3" id="reportUserFilterDiv" style="display: none;">
+                            <label for="reportUserFilter" class="form-label">User</label>
+                            <select class="form-select" id="reportUserFilter">
+                                <option value="">All Users</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button class="btn btn-primary" onclick="generateReport()">
+                                    <i class="fas fa-play me-2"></i>Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Results -->
+            <div id="reportResults" class="card" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i><span id="reportTitle">Report Results</span></h5>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="exportReport()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="printReport()">
+                            <i class="fas fa-print me-1"></i>Print
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="reportContent">
+                    <!-- Report content will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Quick Stats Dashboard -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Quick Stats</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-primary" id="quickStatsLoans">0</h4>
+                                    <small class="text-muted">Total Loans</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-success" id="quickStatsCollections">₦0</h4>
+                                    <small class="text-muted">Total Collections</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-clock me-2"></i>This Month</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <h4 class="text-info" id="monthLoans">0</h4>
+                                    <small class="text-muted">New Loans</small>
+                                </div>
+                                <div class="col-6">
+                                    <h4 class="text-warning" id="monthCollections">₦0</h4>
+                                    <small class="text-muted">Collections</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Add Borrower Modal -->

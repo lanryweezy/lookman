@@ -156,8 +156,8 @@ function showSection(sectionName) {
             case 'reports':
                 loadReports();
                 break;
-            case 'profile':
-                loadProfile();
+            case 'borrower-profiles':
+                loadBorrowerProfiles();
                 break;
         }
     }
@@ -1846,13 +1846,13 @@ function printReport() {
     printWindow.print();
 }
 
-// Profile Management Functions
+// Borrower Profile Management Functions
 let currentProfile = null;
 let currentDocumentType = null;
 let cameraStream = null;
 
-function loadProfile() {
-    console.log('Loading profile...');
+function loadBorrowerProfiles() {
+    console.log('Loading borrower profiles...');
     loadBorrowersForProfile();
 }
 
