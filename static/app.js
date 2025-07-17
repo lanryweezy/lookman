@@ -159,6 +159,12 @@ function showSection(sectionName) {
             case 'borrower-profiles':
                 loadBorrowerProfiles();
                 break;
+            case 'salary':
+                loadSalaries();
+                break;
+            case 'settings':
+                loadSettings();
+                break;
         }
     }
 }
@@ -2657,6 +2663,119 @@ function showFirstLoginNotification() {
             notificationDiv.remove();
         }
     }, 30000);
+}
+
+async function loadSalaries() {
+    try {
+        showAlert('Loading salaries...', 'info');
+
+        const response = await apiCall('/salary/');
+        const salaries = response.salaries || [];
+
+        displaySalaries(salaries);
+
+        if (salaries.length === 0) {
+            showAlert('No salary calculations found.', 'info');
+        }
+
+    } catch (error) {
+        console.error('Failed to load salaries:', error);
+        showAlert('Failed to load salaries: ' + error.message, 'danger');
+        displaySalaries([]);
+    }
+}
+
+function displaySalaries(salaries) {
+    const tbody = document.getElementById('salaryTableBody');
+
+    if (!salaries || salaries.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-money-check-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No salary calculations found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = salaries.map(salary => `
+        <tr>
+            <td>${salary.id}</td>
+            <td>${salary.user_id}</td>
+            <td>${salary.calculation_period}</td>
+            <td>${formatCurrency(salary.base_salary)}</td>
+            <td>${formatCurrency(salary.commission_amount)}</td>
+            <td>${formatCurrency(salary.total_salary)}</td>
+            <td>${formatDate(salary.created_at)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadSettings() {
+    try {
+        showAlert('Loading settings...', 'info');
+
+        const response = await apiCall('/admin/settings');
+        const settings = response.settings || [];
+
+        displaySettings(settings);
+
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+        showAlert('Failed to load settings: ' + error.message, 'danger');
+    }
+}
+
+function displaySettings(settings) {
+    const form = document.getElementById('settingsForm');
+    form.innerHTML = '';
+
+    settings.forEach(setting => {
+        const div = document.createElement('div');
+        div.className = 'mb-3';
+
+        let inputHtml = '';
+        if (setting.setting_key.includes('rate')) {
+            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}" step="0.01">`;
+        } else if (setting.setting_key.includes('duration')) {
+            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
+        } else {
+            inputHtml = `<input type="text" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
+        }
+
+        div.innerHTML = `
+            <label for="setting-${setting.setting_key}" class="form-label">${setting.description}</label>
+            ${inputHtml}
+        `;
+        form.appendChild(div);
+    });
+}
+
+async function saveSettings() {
+    try {
+        const form = document.getElementById('settingsForm');
+        const inputs = form.querySelectorAll('input');
+
+        const settings = [];
+        inputs.forEach(input => {
+            const key = input.id.replace('setting-', '');
+            const value = input.value;
+            settings.push({ setting_key: key, setting_value: value });
+        });
+
+        await apiCall('/admin/settings', {
+            method: 'POST',
+            body: JSON.stringify({ settings })
+        });
+
+        showAlert('Settings saved successfully!', 'success');
+
+    } catch (error) {
+        console.error('Failed to save settings:', error);
+        showAlert('Failed to save settings: ' + error.message, 'danger');
+    }
 }
 
 // Export functions for global access
