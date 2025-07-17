@@ -176,38 +176,75 @@ function hideAllContentSections() {
 async function loadDashboard() {
     try {
         // Load dashboard statistics
-        const statsResponse = await fetch(`${API_BASE}/admin/dashboard/stats`, {
-            credentials: 'include'
-        });
-        
-        if (statsResponse.ok) {
-            const statsData = await statsResponse.json();
-            updateDashboardStats(statsData.stats);
-        }
+        const statsResponse = await apiCall('/admin/dashboard/stats');
+        updateDashboardStats(statsResponse.stats);
         
         // Load recent loans
-        const loansResponse = await fetch(`${API_BASE}/loans?limit=5`, {
-            credentials: 'include'
-        });
-        
-        if (loansResponse.ok) {
-            const loansData = await loansResponse.json();
-            updateRecentLoans(loansData.loans);
-        }
+        const loansResponse = await apiCall('/loans?limit=5');
+        updateRecentLoans(loansResponse.loans);
         
         // Load today's payments
-        const paymentsResponse = await fetch(`${API_BASE}/payments/today`, {
-            credentials: 'include'
-        });
+        const paymentsResponse = await apiCall('/payments/today');
+        updateTodayPayments(paymentsResponse);
         
-        if (paymentsResponse.ok) {
-            const paymentsData = await paymentsResponse.json();
-            updateTodayPayments(paymentsData);
-        }
+        // Load dashboard charts
+        loadDashboardCharts();
         
     } catch (error) {
         console.error('Dashboard load error:', error);
         showAlert('Failed to load dashboard data', 'warning');
+    }
+}
+
+async function loadDashboardCharts() {
+    try {
+        const statsResponse = await apiCall('/admin/dashboard/stats');
+        const stats = statsResponse.stats;
+
+        // Loan Status Chart
+        const loanStatusCtx = document.getElementById('loanStatusChart').getContext('2d');
+        new Chart(loanStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Active', 'Completed', 'Overdue', 'Defaulted'],
+                datasets: [{
+                    label: 'Loan Status',
+                    data: [stats.active_loans, stats.completed_loans, stats.overdue_loans, stats.defaulted_loans],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        // Monthly Collections Chart
+        const monthlyCollectionsCtx = document.getElementById('monthlyCollectionsChart').getContext('2d');
+        new Chart(monthlyCollectionsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['This Month'],
+                datasets: [{
+                    label: 'Monthly Collections',
+                    data: [stats.month_collections],
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load dashboard charts:', error);
+        showAlert('Failed to load dashboard charts', 'warning');
     }
 }
 
@@ -276,14 +313,15 @@ let allBorrowers = [];
 let borrowerToDelete = null;
 
 // Load borrowers data
-async function loadBorrowers() {
+async function loadBorrowers(page = 1) {
     try {
         showAlert('Loading borrowers...', 'info');
         
-        const response = await apiCall('/borrowers');
+        const response = await apiCall(`/borrowers?page=${page}`);
         allBorrowers = response.borrowers || [];
         
         displayBorrowers(allBorrowers);
+        displayPagination('borrowers', response.total_pages, response.current_page);
         
         if (allBorrowers.length === 0) {
             showAlert('No borrowers found. Add your first borrower!', 'info');
@@ -656,7 +694,7 @@ function createLoanForBorrower(borrowerId) {
 let allLoans = [];
 let allBorrowersForLoans = [];
 
-async function loadLoans() {
+async function loadLoans(page = 1) {
     try {
         showAlert('Loading loans...', 'info');
         
@@ -665,7 +703,7 @@ async function loadLoans() {
         updateLoansSummary(summaryResponse.summary);
         
         // Load loans list
-        const loansResponse = await apiCall('/loans');
+        const loansResponse = await apiCall(`/loans?page=${page}`);
         allLoans = loansResponse.loans || [];
         
         // Load borrowers for dropdown
@@ -673,6 +711,7 @@ async function loadLoans() {
         allBorrowersForLoans = borrowersResponse.borrowers || [];
         
         displayLoans(allLoans);
+        displayPagination('loans', loansResponse.total_pages, loansResponse.current_page);
         populateLoanBorrowerFilter();
         
         if (allLoans.length === 0) {
@@ -876,7 +915,7 @@ async function saveLoan() {
 let allPayments = [];
 let allLoansForPayments = [];
 
-async function loadPayments() {
+async function loadPayments(page = 1) {
     try {
         showAlert('Loading payments...', 'info');
         
@@ -885,7 +924,7 @@ async function loadPayments() {
         updatePaymentsSummary(todayResponse);
         
         // Load all payments
-        const paymentsResponse = await apiCall('/payments');
+        const paymentsResponse = await apiCall(`/payments?page=${page}`);
         allPayments = paymentsResponse.payments || [];
         
         // Load active loans for dropdown
@@ -897,6 +936,7 @@ async function loadPayments() {
         document.getElementById('overduePaymentsCount').textContent = overdueResponse.total_overdue || 0;
         
         displayPayments(allPayments);
+        displayPagination('payments', paymentsResponse.total_pages, paymentsResponse.current_page);
         populatePaymentLoanFilter();
         
     } catch (error) {
@@ -1152,15 +1192,16 @@ function recordOverduePayment(loanId, paymentDay) {
 let allUsers = [];
 let userToDelete = null;
 
-async function loadUsers() {
+async function loadUsers(page = 1) {
     try {
         showAlert('Loading users...', 'info');
         
-        const response = await apiCall('/admin/users');
+        const response = await apiCall(`/admin/users?page=${page}`);
         allUsers = response.users || [];
         
         updateUsersSummary(allUsers);
         displayUsers(allUsers);
+        displayPagination('users', response.total_pages, response.current_page);
         
         if (allUsers.length === 0) {
             showAlert('No users found. Add your first user!', 'info');
@@ -2495,6 +2536,22 @@ window.confirmDeleteBorrower = function() {
     }
 };
 
+function displayPagination(section, totalPages, currentPage) {
+    const paginationContainer = document.getElementById(`${section}Pagination`);
+    if (!paginationContainer) return;
+
+    let paginationHtml = '<ul class="pagination">';
+    for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="load${section.charAt(0).toUpperCase() + section.slice(1)}(${i})">${i}</a>
+            </li>
+        `;
+    }
+    paginationHtml += '</ul>';
+    paginationContainer.innerHTML = paginationHtml;
+}
+
 // Utility functions
 function formatCurrency(amount) {
     return new Intl.NumberFormat('en-NG', {
@@ -2605,4 +2662,3 @@ function showFirstLoginNotification() {
 // Export functions for global access
 window.showSection = showSection;
 window.logout = logout;
-

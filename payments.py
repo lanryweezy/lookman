@@ -2,10 +2,10 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
 from loans import Loan
-# Model imports will be resolved through circular imports
 from auth import account_officer_required
 from datetime import datetime, date
 from decimal import Decimal
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 payments_bp = Blueprint('payments', __name__)
 
@@ -15,6 +15,9 @@ payments_bp = Blueprint('payments', __name__)
 def get_payments():
     """Get all payments (filtered by user role and optional filters)"""
     try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
         # Get query parameters for filtering
         loan_id = request.args.get('loan_id')
         payment_date_str = request.args.get('payment_date')
@@ -37,10 +40,14 @@ def get_payments():
             except ValueError:
                 return jsonify({'error': 'Invalid payment date format. Use YYYY-MM-DD'}), 400
         
-        payments = query.order_by(Payment.payment_date.desc()).all()
+        payments = query.order_by(Payment.payment_date.desc()).paginate(page=page, per_page=per_page)
         
+        payment_schema = PaymentSchema(many=True)
         return jsonify({
-            'payments': [payment.to_dict() for payment in payments]
+            'payments': payment_schema.dump(payments.items),
+            'total_pages': payments.pages,
+            'current_page': payments.page,
+            'total_items': payments.total
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -116,9 +123,10 @@ def record_payment():
         
         db.session.commit()
         
+        payment_schema = PaymentSchema()
         return jsonify({
             'message': 'Payment recorded successfully',
-            'payment': new_payment.to_dict()
+            'payment': payment_schema.dump(new_payment)
         }), 201
         
     except Exception as e:
@@ -137,8 +145,9 @@ def get_payment(payment_id):
         if not current_user.is_admin() and payment.loan.account_officer_id != current_user.id:
             return jsonify({'error': 'Access denied'}), 403
         
+        payment_schema = PaymentSchema()
         return jsonify({
-            'payment': payment.to_dict()
+            'payment': payment_schema.dump(payment)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -173,9 +182,10 @@ def update_payment(payment_id):
         
         db.session.commit()
         
+        payment_schema = PaymentSchema()
         return jsonify({
             'message': 'Payment updated successfully',
-            'payment': payment.to_dict()
+            'payment': payment_schema.dump(payment)
         }), 200
         
     except Exception as e:
@@ -230,9 +240,10 @@ def get_today_payments():
         total_expected = sum(payment.expected_amount for payment in payments)
         total_collected = sum(payment.actual_amount for payment in payments)
         
+        payment_schema = PaymentSchema(many=True)
         return jsonify({
             'date': today.isoformat(),
-            'payments': [payment.to_dict() for payment in payments],
+            'payments': payment_schema.dump(payments),
             'summary': {
                 'total_payments': len(payments),
                 'total_expected': float(total_expected),
@@ -312,20 +323,24 @@ class Payment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'loan_id': self.loan_id,
-            'payment_date': self.payment_date.isoformat() if self.payment_date else None,
-            'expected_amount': float(self.expected_amount),
-            'actual_amount': float(self.actual_amount),
-            'payment_day': self.payment_day,
-            'is_weekend_adjusted': self.is_weekend_adjusted,
-            'recorded_by': self.recorded_by,
-            'notes': self.notes,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-    
     def __repr__(self):
         return f'<Payment {self.id} - Loan {self.loan_id} - Day {self.payment_day}>'
+
+from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
+
+class PaymentSchema(SQLAlchemySchema):
+    class Meta:
+        model = Payment
+        load_instance = True
+
+    id = auto_field(dump_only=True)
+    loan_id = auto_field()
+    payment_date = auto_field()
+    expected_amount = auto_field()
+    actual_amount = auto_field()
+    payment_day = auto_field()
+    is_weekend_adjusted = auto_field()
+    recorded_by = auto_field()
+    notes = auto_field()
+    created_at = auto_field()
+    updated_at = auto_field()

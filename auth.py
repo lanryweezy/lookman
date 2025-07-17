@@ -39,9 +39,11 @@ def login():
         if user and user.check_password(password) and user.is_active:
             login_user(user)
             
+            from user import UserSchema
+            user_schema = UserSchema()
             response_data = {
                 'message': 'Login successful',
-                'user': user.to_dict()
+                'user': user_schema.dump(user)
             }
             
             # Check if first login and add appropriate message
@@ -71,8 +73,10 @@ def logout():
 def profile():
     """Get current user profile"""
     try:
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
-            'user': current_user.to_dict()
+            'user': user_schema.dump(current_user)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -108,10 +112,11 @@ def change_password():
 def check_auth():
     """Check if user is authenticated"""
     if current_user.is_authenticated:
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'authenticated': True,
-            'user': current_user.to_dict()
+            'user': user_schema.dump(current_user)
         }), 200
     else:
         return jsonify({'authenticated': False}), 200
-

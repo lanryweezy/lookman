@@ -1,11 +1,11 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
-# Model imports will be resolved through circular imports
 from settings import SystemSetting
 from auth import account_officer_required
 from datetime import datetime, date
 from decimal import Decimal
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 loans_bp = Blueprint('loans', __name__)
 
@@ -15,6 +15,9 @@ loans_bp = Blueprint('loans', __name__)
 def get_loans():
     """Get all loans (filtered by user role and optional filters)"""
     try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
         # Get query parameters for filtering
         status = request.args.get('status')
         borrower_id = request.args.get('borrower_id')
@@ -33,10 +36,14 @@ def get_loans():
         if borrower_id:
             query = query.filter_by(borrower_id=borrower_id)
         
-        loans = query.order_by(Loan.created_at.desc()).all()
+        loans = query.order_by(Loan.created_at.desc()).paginate(page=page, per_page=per_page)
         
+        loan_schema = LoanSchema(many=True)
         return jsonify({
-            'loans': [loan.to_dict() for loan in loans]
+            'loans': loan_schema.dump(loans.items),
+            'total_pages': loans.pages,
+            'current_page': loans.page,
+            'total_items': loans.total
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -116,9 +123,10 @@ def create_loan():
         db.session.add(new_loan)
         db.session.commit()
         
+        loan_schema = LoanSchema()
         return jsonify({
             'message': 'Loan created successfully',
-            'loan': new_loan.to_dict()
+            'loan': loan_schema.dump(new_loan)
         }), 201
         
     except Exception as e:
@@ -137,8 +145,9 @@ def get_loan(loan_id):
         if not current_user.is_admin() and loan.account_officer_id != current_user.id:
             return jsonify({'error': 'Access denied'}), 403
         
+        loan_schema = LoanSchema()
         return jsonify({
-            'loan': loan.to_dict()
+            'loan': loan_schema.dump(loan)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -177,9 +186,10 @@ def update_loan(loan_id):
         loan.updated_at = datetime.utcnow()
         db.session.commit()
         
+        loan_schema = LoanSchema()
         return jsonify({
             'message': 'Loan updated successfully',
-            'loan': loan.to_dict()
+            'loan': loan_schema.dump(loan)
         }), 200
         
     except Exception as e:
@@ -234,9 +244,10 @@ def update_loan_status(loan_id):
         loan.updated_at = datetime.utcnow()
         db.session.commit()
         
+        loan_schema = LoanSchema()
         return jsonify({
             'message': 'Loan status updated successfully',
-            'loan': loan.to_dict()
+            'loan': loan_schema.dump(loan)
         }), 200
         
     except Exception as e:
@@ -335,7 +346,10 @@ class Loan(db.Model):
     
     def calculate_daily_repayment(self):
         """Calculate daily repayment amount"""
-        self.daily_repayment = self.total_amount / self.loan_duration_days
+        if self.loan_duration_days > 0:
+            self.daily_repayment = self.total_amount / self.loan_duration_days
+        else:
+            self.daily_repayment = self.total_amount
     
     def calculate_expected_end_date(self):
         """Calculate expected end date"""
@@ -393,27 +407,39 @@ class Loan(db.Model):
         from datetime import date
         return date.today() > self.expected_end_date and self.status != 'completed'
     
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'borrower_id': self.borrower_id,
-            'account_officer_id': self.account_officer_id,
-            'principal_amount': float(self.principal_amount),
-            'interest_rate': float(self.interest_rate),
-            'interest_amount': float(self.interest_amount),
-            'expenses': float(self.expenses),
-            'total_amount': float(self.total_amount),
-            'daily_repayment': float(self.daily_repayment),
-            'loan_duration_days': self.loan_duration_days,
-            'start_date': self.start_date.isoformat() if self.start_date else None,
-            'expected_end_date': self.expected_end_date.isoformat() if self.expected_end_date else None,
-            'actual_end_date': self.actual_end_date.isoformat() if self.actual_end_date else None,
-            'status': self.status,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'total_payments': float(self.get_total_payments()),
-            'outstanding_balance': float(self.get_outstanding_balance())
-        }
-    
     def __repr__(self):
         return f'<Loan {self.id} - {self.borrower.name if self.borrower else "Unknown"} - {self.status}>'
+
+from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
+
+class LoanSchema(SQLAlchemySchema):
+    class Meta:
+        model = Loan
+        load_instance = True
+
+    id = auto_field(dump_only=True)
+    borrower_id = auto_field()
+    account_officer_id = auto_field()
+    principal_amount = auto_field()
+    interest_rate = auto_field()
+    interest_amount = auto_field()
+    expenses = auto_field()
+    total_amount = auto_field()
+    daily_repayment = auto_field()
+    loan_duration_days = auto_field()
+    start_date = auto_field()
+    expected_end_date = auto_field()
+    actual_end_date = auto_field()
+    status = auto_field()
+    created_at = auto_field()
+    updated_at = auto_field()
+    loan_purpose = auto_field()
+    loan_term = auto_field()
+    has_collateral = auto_field()
+    collateral_type = auto_field()
+    collateral_value = auto_field()
+    collateral_description = auto_field()
+    guarantor_name = auto_field()
+    guarantor_phone = auto_field()
+    guarantor_address = auto_field()
+    guarantor_relationship = auto_field()

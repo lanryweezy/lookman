@@ -53,9 +53,11 @@ def profile_dashboard():
 def get_current_user_profile():
     """Get current user's profile information"""
     try:
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
-            'user': current_user.to_dict()
+            'user': user_schema.dump(current_user)
         }), 200
     except Exception as e:
         return jsonify({
@@ -101,10 +103,12 @@ def update_profile():
 
         db.session.commit()
 
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
             'message': 'Profile updated successfully',
-            'user': current_user.to_dict()
+            'user': user_schema.dump(current_user)
         }), 200
 
     except Exception as e:
@@ -180,9 +184,11 @@ def get_all_users():
     """Get all users for admin management"""
     try:
         users = User.query.all()
+        from user import UserSchema
+        user_schema = UserSchema(many=True)
         return jsonify({
             'success': True,
-            'users': [user.to_dict() for user in users],
+            'users': user_schema.dump(users),
             'total': len(users)
         }), 200
 
@@ -199,9 +205,11 @@ def get_user_by_id(user_id):
     """Get specific user by ID (admin only)"""
     try:
         user = User.query.get_or_404(user_id)
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
-            'user': user.to_dict()
+            'user': user_schema.dump(user)
         }), 200
 
     except Exception as e:
@@ -258,10 +266,12 @@ def admin_update_user(user_id):
 
         db.session.commit()
 
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
             'message': 'User profile updated successfully',
-            'user': user.to_dict()
+            'user': user_schema.dump(user)
         }), 200
 
     except Exception as e:
@@ -392,10 +402,12 @@ def admin_create_user():
         db.session.add(new_user)
         db.session.commit()
 
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
             'message': 'User created successfully',
-            'user': new_user.to_dict()
+            'user': user_schema.dump(new_user)
         }), 201
 
     except Exception as e:
@@ -427,10 +439,12 @@ def toggle_user_status(user_id):
 
         status = 'activated' if user.is_active else 'deactivated'
 
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'success': True,
             'message': f'User {status} successfully',
-            'user': user.to_dict()
+            'user': user_schema.dump(user)
         }), 200
 
     except Exception as e:

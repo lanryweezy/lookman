@@ -127,6 +127,49 @@ def test_create_loan():
         print(f"❌ Loan creation test failed: {str(e)}")
         return False
 
+def test_create_payment():
+    """Test creating a new payment"""
+    try:
+        with app.test_client() as client:
+            # Login first
+            client.post('/api/auth/login', json={'username': 'admin', 'password': 'admin123'})
+
+            # Create a borrower and a loan first
+            borrower_data = {
+                "name": "Payment Test Borrower",
+                "phone": "7778889999",
+                "address": "202 Payment Test Pl"
+            }
+            borrower_response = client.post('/api/borrowers/', json=borrower_data)
+            borrower_id = borrower_response.get_json()['borrower']['id']
+
+            loan_data = {
+                "borrower_id": borrower_id,
+                "principal_amount": 5000,
+                "loan_duration_days": 10,
+                "start_date": "2025-10-01"
+            }
+            loan_response = client.post('/api/loans/', json=loan_data)
+            loan_id = loan_response.get_json()['loan']['id']
+
+            payment_data = {
+                "loan_id": loan_id,
+                "payment_day": 1,
+                "payment_date": "2025-10-01",
+                "actual_amount": 500
+            }
+            response = client.post('/api/payments/', json=payment_data)
+
+            if response.status_code == 201:
+                print("✅ Payment creation test passed")
+                return True
+            else:
+                print(f"❌ Payment creation test failed: {response.status_code} - {response.get_data(as_text=True)}")
+                return False
+    except Exception as e:
+        print(f"❌ Payment creation test failed: {str(e)}")
+        return False
+
 def main():
     """Run all tests"""
     print("🧪 Testing Lookman Application")
@@ -136,9 +179,10 @@ def main():
     route_test = test_routes()
     borrower_test = test_create_borrower()
     loan_test = test_create_loan()
+    payment_test = test_create_payment()
     
     print("=" * 40)
-    if db_test and route_test and borrower_test and loan_test:
+    if db_test and route_test and borrower_test and loan_test and payment_test:
         print("✅ All tests passed! Application is ready for deployment.")
         return True
     else:

@@ -185,6 +185,30 @@
                 </div>
             </div>
 
+            <!-- Charts -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Loan Status Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="loanStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Monthly Collections</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlyCollectionsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Activity -->
             <div class="row">
                 <div class="col-md-6">
@@ -253,6 +277,7 @@
             
             <!-- Borrowers Table -->
             <div class="card">
+                <div id="borrowersPagination" class="pagination-container"></div>
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-table me-2"></i>Borrowers List</h5>
                 </div>
@@ -391,6 +416,7 @@
             
             <!-- Loans Table -->
             <div class="card">
+                <div id="loansPagination" class="pagination-container"></div>
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-table me-2"></i>Loans List</h5>
                 </div>
@@ -531,6 +557,7 @@
             
             <!-- Payments Table -->
             <div class="card">
+                <div id="paymentsPagination" class="pagination-container"></div>
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-table me-2"></i>Payments List</h5>
                 </div>
@@ -673,6 +700,7 @@
             
             <!-- Users Table -->
             <div class="card">
+                <div id="usersPagination" class="pagination-container"></div>
                 <div class="card-header">
                     <h5 class="mb-0"><i class="fas fa-table me-2"></i>Users List</h5>
                 </div>
@@ -1997,6 +2025,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
