@@ -51,20 +51,25 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'full_name': self.full_name,
-            'email': self.email,
-            'phone': self.phone,
-            'role': self.role,
-            'is_active': self.is_active,
-            'is_first_login': self.is_first_login,
-            'last_password_change': self.last_password_change.isoformat() if self.last_password_change else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
+
+from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
+
+class UserSchema(SQLAlchemySchema):
+    class Meta:
+        model = User
+        load_instance = True
+
+    id = auto_field(dump_only=True)
+    username = auto_field()
+    full_name = auto_field()
+    email = auto_field()
+    phone = auto_field()
+    role = auto_field()
+    is_active = auto_field()
+    is_first_login = auto_field()
+    last_password_change = auto_field()
+    created_at = auto_field()
+    updated_at = auto_field()
 
 # Blueprint for user-related endpoints
 user_bp = Blueprint('user', __name__)

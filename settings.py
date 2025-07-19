@@ -12,45 +12,26 @@ class SystemSetting(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     @staticmethod
-    def get_setting(key, default_value=None):
-        """Get a setting value by key"""
+    def get_setting(key, default=None):
         setting = SystemSetting.query.filter_by(setting_key=key).first()
-        return setting.setting_value if setting else default_value
+        return setting.setting_value if setting else default
 
     @staticmethod
-    def set_setting(key, value, description=None, updated_by=None):
-        """Set a setting value"""
+    def set_setting(key, value, description=None, user_id=None):
         setting = SystemSetting.query.filter_by(setting_key=key).first()
         if setting:
             setting.setting_value = value
             if description:
                 setting.description = description
-            if updated_by:
-                setting.updated_by = updated_by
+            if user_id:
+                setting.updated_by = user_id
             setting.updated_at = datetime.utcnow()
         else:
             setting = SystemSetting(
                 setting_key=key,
                 setting_value=value,
                 description=description,
-                updated_by=updated_by
+                updated_by=user_id
             )
             db.session.add(setting)
-        
         db.session.commit()
-        return setting
-
-    def __repr__(self):
-        return f'<SystemSetting {self.setting_key}>'
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'setting_key': self.setting_key,
-            'setting_value': self.setting_value,
-            'description': self.description,
-            'updated_by': self.updated_by,
-            'updater_name': self.updater.full_name if self.updater else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-

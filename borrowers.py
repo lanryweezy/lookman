@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
-# Model imports will be resolved through circular imports
 from auth import account_officer_required
 from datetime import datetime
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 borrowers_bp = Blueprint('borrowers', __name__)
 
@@ -13,14 +13,31 @@ borrowers_bp = Blueprint('borrowers', __name__)
 def get_borrowers():
     """Get all borrowers (filtered by user role)"""
     try:
-        # Admin can see all borrowers, account officers see only their own
-        if current_user.is_admin():
-            borrowers = Borrower.query.all()
-        else:
-            borrowers = Borrower.query.filter_by(created_by=current_user.id).all()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        query = Borrower.query
+
+        # Filter by user role
+        if not current_user.is_admin():
+            query = query.filter_by(created_by=current_user.id)
+
+        # Search
+        search_term = request.args.get('search')
+        if search_term:
+            query = query.filter(
+                Borrower.name.ilike(f'%{search_term}%') |
+                Borrower.phone.ilike(f'%{search_term}%')
+            )
+
+        borrowers = query.paginate(page=page, per_page=per_page)
         
+        borrower_schema = BorrowerSchema(many=True)
         return jsonify({
-            'borrowers': [borrower.to_dict() for borrower in borrowers]
+            'borrowers': borrower_schema.dump(borrowers.items),
+            'total_pages': borrowers.pages,
+            'current_page': borrowers.page,
+            'total_items': borrowers.total
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -55,9 +72,10 @@ def create_borrower():
         db.session.add(new_borrower)
         db.session.commit()
         
+        borrower_schema = BorrowerSchema()
         return jsonify({
             'message': 'Borrower created successfully',
-            'borrower': new_borrower.to_dict()
+            'borrower': borrower_schema.dump(new_borrower)
         }), 201
         
     except Exception as e:
@@ -76,8 +94,9 @@ def get_borrower(borrower_id):
         if not current_user.is_admin() and borrower.created_by != current_user.id:
             return jsonify({'error': 'Access denied'}), 403
         
+        borrower_schema = BorrowerSchema()
         return jsonify({
-            'borrower': borrower.to_dict()
+            'borrower': borrower_schema.dump(borrower)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -104,9 +123,10 @@ def update_borrower(borrower_id):
         borrower.updated_at = datetime.utcnow()
         db.session.commit()
         
+        borrower_schema = BorrowerSchema()
         return jsonify({
             'message': 'Borrower updated successfully',
-            'borrower': borrower.to_dict()
+            'borrower': borrower_schema.dump(borrower)
         }), 200
         
     except Exception as e:
@@ -126,6 +146,7 @@ def delete_borrower(borrower_id):
             return jsonify({'error': 'Access denied'}), 403
         
         # Check if borrower has active loans
+        from loans import Loan
         active_loans = Loan.query.filter_by(borrower_id=borrower_id, status='active').count()
         if active_loans > 0:
             return jsonify({'error': f'Cannot delete borrower with {active_loans} active loans'}), 400
@@ -151,11 +172,14 @@ def get_borrower_loans(borrower_id):
         if not current_user.is_admin() and borrower.created_by != current_user.id:
             return jsonify({'error': 'Access denied'}), 403
         
+        from loans import Loan, LoanSchema
         loans = Loan.query.filter_by(borrower_id=borrower_id).all()
         
+        borrower_schema = BorrowerSchema()
+        loan_schema = LoanSchema(many=True)
         return jsonify({
-            'borrower': borrower.to_dict(),
-            'loans': [loan.to_dict() for loan in loans]
+            'borrower': borrower_schema.dump(borrower),
+            'loans': loan_schema.dump(loans)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -211,41 +235,45 @@ class Borrower(db.Model):
     # Relationships
     loans = db.relationship('Loan', backref='borrower', lazy=True)
     
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'phone': self.phone,
-            'address': self.address,
-            'created_by': self.created_by,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
-            'email': self.email,
-            'city': self.city,
-            'state': self.state,
-            'country': self.country,
-            'marital_status': self.marital_status,
-            'bvn': self.bvn,
-            'nin': self.nin,
-            'primary_id_type': self.primary_id_type,
-            'primary_id_number': self.primary_id_number,
-            'employment_type': self.employment_type,
-            'employer_name': self.employer_name,
-            'job_title': self.job_title,
-            'work_address': self.work_address,
-            'monthly_income': float(self.monthly_income) if self.monthly_income else None,
-            'employment_start_date': self.employment_start_date.isoformat() if self.employment_start_date else None,
-            'business_name': self.business_name,
-            'business_registration_number': self.business_registration_number,
-            'business_address': self.business_address,
-            'business_type': self.business_type,
-            'annual_revenue': float(self.annual_revenue) if self.annual_revenue else None,
-            'bank_name': self.bank_name,
-            'account_number': self.account_number,
-            'account_name': self.account_name,
-            'account_type': self.account_type,
-        }
-    
     def __repr__(self):
         return f'<Borrower {self.name}>'
+
+from marshmallow_sqlalchemy import SQLAlchemySchema, auto_field
+
+class BorrowerSchema(SQLAlchemySchema):
+    class Meta:
+        model = Borrower
+        load_instance = True
+
+    id = auto_field(dump_only=True)
+    name = auto_field()
+    phone = auto_field()
+    address = auto_field()
+    created_by = auto_field()
+    created_at = auto_field()
+    updated_at = auto_field()
+    date_of_birth = auto_field()
+    email = auto_field()
+    city = auto_field()
+    state = auto_field()
+    country = auto_field()
+    marital_status = auto_field()
+    bvn = auto_field()
+    nin = auto_field()
+    primary_id_type = auto_field()
+    primary_id_number = auto_field()
+    employment_type = auto_field()
+    employer_name = auto_field()
+    job_title = auto_field()
+    work_address = auto_field()
+    monthly_income = auto_field()
+    employment_start_date = auto_field()
+    business_name = auto_field()
+    business_registration_number = auto_field()
+    business_address = auto_field()
+    business_type = auto_field()
+    annual_revenue = auto_field()
+    bank_name = auto_field()
+    account_number = auto_field()
+    account_name = auto_field()
+    account_type = auto_field()

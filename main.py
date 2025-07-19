@@ -3,8 +3,10 @@ import sys
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory
+import json
+from flask import Flask, send_from_directory, jsonify
 from flask_login import LoginManager
+from werkzeug.exceptions import HTTPException
 from flask_cors import CORS
 from flask_migrate import Migrate
 from user import db, User, user_bp
@@ -112,6 +114,20 @@ def serve(path):
             return send_from_directory(static_folder_path, 'index.html')
         else:
             return "index.html not found", 404
+
+@app.errorhandler(HTTPException)
+def handle_exception(e):
+    """Return JSON instead of HTML for HTTP errors."""
+    # start with the correct headers and status code from the error
+    response = e.get_response()
+    # replace the body with JSON
+    response.data = json.dumps({
+        "code": e.code,
+        "name": e.name,
+        "description": e.description,
+    })
+    response.content_type = "application/json"
+    return response
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

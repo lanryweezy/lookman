@@ -13,9 +13,17 @@ admin_bp = Blueprint('admin', __name__)
 def get_users():
     """Get all users"""
     try:
-        users = User.query.all()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        users = User.query.paginate(page=page, per_page=per_page)
+        from user import UserSchema
+        user_schema = UserSchema(many=True)
         return jsonify({
-            'users': [user.to_dict() for user in users]
+            'users': user_schema.dump(users.items),
+            'total_pages': users.pages,
+            'current_page': users.page,
+            'total_items': users.total
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -58,9 +66,11 @@ def create_user():
         db.session.add(new_user)
         db.session.commit()
         
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'message': 'User created successfully',
-            'user': new_user.to_dict()
+            'user': user_schema.dump(new_user)
         }), 201
         
     except Exception as e:
@@ -96,9 +106,11 @@ def update_user(user_id):
         user.updated_at = datetime.utcnow()
         db.session.commit()
         
+        from user import UserSchema
+        user_schema = UserSchema()
         return jsonify({
             'message': 'User updated successfully',
-            'user': user.to_dict()
+            'user': user_schema.dump(user)
         }), 200
         
     except Exception as e:
@@ -192,9 +204,11 @@ def get_settings():
     """Get all system settings"""
     try:
         from settings import SystemSetting
+        from settings import SystemSettingSchema
         settings = SystemSetting.query.all()
+        setting_schema = SystemSettingSchema(many=True)
         return jsonify({
-            'settings': [setting.to_dict() for setting in settings]
+            'settings': setting_schema.dump(settings)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -214,10 +228,10 @@ def update_settings():
             description = setting_data.get('description')
             
             if key and value is not None:
+                from settings import SystemSetting
                 SystemSetting.set_setting(key, value, description, current_user.id)
         
         return jsonify({'message': 'Settings updated successfully'}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-

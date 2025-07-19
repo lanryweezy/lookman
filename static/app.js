@@ -156,8 +156,14 @@ function showSection(sectionName) {
             case 'reports':
                 loadReports();
                 break;
-            case 'profile':
-                loadProfile();
+            case 'borrower-profiles':
+                loadBorrowerProfiles();
+                break;
+            case 'salary':
+                loadSalaries();
+                break;
+            case 'settings':
+                loadSettings();
                 break;
         }
     }
@@ -176,38 +182,75 @@ function hideAllContentSections() {
 async function loadDashboard() {
     try {
         // Load dashboard statistics
-        const statsResponse = await fetch(`${API_BASE}/admin/dashboard/stats`, {
-            credentials: 'include'
-        });
-        
-        if (statsResponse.ok) {
-            const statsData = await statsResponse.json();
-            updateDashboardStats(statsData.stats);
-        }
+        const statsResponse = await apiCall('/admin/dashboard/stats');
+        updateDashboardStats(statsResponse.stats);
         
         // Load recent loans
-        const loansResponse = await fetch(`${API_BASE}/loans?limit=5`, {
-            credentials: 'include'
-        });
-        
-        if (loansResponse.ok) {
-            const loansData = await loansResponse.json();
-            updateRecentLoans(loansData.loans);
-        }
+        const loansResponse = await apiCall('/loans?limit=5');
+        updateRecentLoans(loansResponse.loans);
         
         // Load today's payments
-        const paymentsResponse = await fetch(`${API_BASE}/payments/today`, {
-            credentials: 'include'
-        });
+        const paymentsResponse = await apiCall('/payments/today');
+        updateTodayPayments(paymentsResponse);
         
-        if (paymentsResponse.ok) {
-            const paymentsData = await paymentsResponse.json();
-            updateTodayPayments(paymentsData);
-        }
+        // Load dashboard charts
+        loadDashboardCharts();
         
     } catch (error) {
         console.error('Dashboard load error:', error);
         showAlert('Failed to load dashboard data', 'warning');
+    }
+}
+
+async function loadDashboardCharts() {
+    try {
+        const statsResponse = await apiCall('/admin/dashboard/stats');
+        const stats = statsResponse.stats;
+
+        // Loan Status Chart
+        const loanStatusCtx = document.getElementById('loanStatusChart').getContext('2d');
+        new Chart(loanStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Active', 'Completed', 'Overdue', 'Defaulted'],
+                datasets: [{
+                    label: 'Loan Status',
+                    data: [stats.active_loans, stats.completed_loans, stats.overdue_loans, stats.defaulted_loans],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        // Monthly Collections Chart
+        const monthlyCollectionsCtx = document.getElementById('monthlyCollectionsChart').getContext('2d');
+        new Chart(monthlyCollectionsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['This Month'],
+                datasets: [{
+                    label: 'Monthly Collections',
+                    data: [stats.month_collections],
+                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load dashboard charts:', error);
+        showAlert('Failed to load dashboard charts', 'warning');
     }
 }
 
@@ -276,14 +319,15 @@ let allBorrowers = [];
 let borrowerToDelete = null;
 
 // Load borrowers data
-async function loadBorrowers() {
+async function loadBorrowers(page = 1) {
     try {
         showAlert('Loading borrowers...', 'info');
         
-        const response = await apiCall('/borrowers');
+        const response = await apiCall(`/borrowers?page=${page}`);
         allBorrowers = response.borrowers || [];
         
         displayBorrowers(allBorrowers);
+        displayPagination('borrowers', response.total_pages, response.current_page);
         
         if (allBorrowers.length === 0) {
             showAlert('No borrowers found. Add your first borrower!', 'info');
@@ -656,7 +700,7 @@ function createLoanForBorrower(borrowerId) {
 let allLoans = [];
 let allBorrowersForLoans = [];
 
-async function loadLoans() {
+async function loadLoans(page = 1) {
     try {
         showAlert('Loading loans...', 'info');
         
@@ -665,7 +709,7 @@ async function loadLoans() {
         updateLoansSummary(summaryResponse.summary);
         
         // Load loans list
-        const loansResponse = await apiCall('/loans');
+        const loansResponse = await apiCall(`/loans?page=${page}`);
         allLoans = loansResponse.loans || [];
         
         // Load borrowers for dropdown
@@ -673,6 +717,7 @@ async function loadLoans() {
         allBorrowersForLoans = borrowersResponse.borrowers || [];
         
         displayLoans(allLoans);
+        displayPagination('loans', loansResponse.total_pages, loansResponse.current_page);
         populateLoanBorrowerFilter();
         
         if (allLoans.length === 0) {
@@ -839,13 +884,16 @@ async function saveLoan() {
             loan_term: document.getElementById('loanTerm').value,
             has_collateral: document.getElementById('hasCollateral').checked,
             collateral_type: document.getElementById('collateralType').value,
-            collateral_value: document.getElementById('collateralValue').value,
             collateral_description: document.getElementById('collateralDescription').value,
             guarantor_name: document.getElementById('guarantorName').value,
             guarantor_phone: document.getElementById('guarantorPhone').value,
             guarantor_address: document.getElementById('guarantorAddress').value,
             guarantor_relationship: document.getElementById('guarantorRelationship').value,
         };
+
+        if (loanData.has_collateral) {
+            loanData.collateral_value = document.getElementById('collateralValue').value;
+        }
         
         const response = await apiCall('/loans', {
             method: 'POST',
@@ -873,7 +921,7 @@ async function saveLoan() {
 let allPayments = [];
 let allLoansForPayments = [];
 
-async function loadPayments() {
+async function loadPayments(page = 1) {
     try {
         showAlert('Loading payments...', 'info');
         
@@ -882,7 +930,7 @@ async function loadPayments() {
         updatePaymentsSummary(todayResponse);
         
         // Load all payments
-        const paymentsResponse = await apiCall('/payments');
+        const paymentsResponse = await apiCall(`/payments?page=${page}`);
         allPayments = paymentsResponse.payments || [];
         
         // Load active loans for dropdown
@@ -894,6 +942,7 @@ async function loadPayments() {
         document.getElementById('overduePaymentsCount').textContent = overdueResponse.total_overdue || 0;
         
         displayPayments(allPayments);
+        displayPagination('payments', paymentsResponse.total_pages, paymentsResponse.current_page);
         populatePaymentLoanFilter();
         
     } catch (error) {
@@ -1149,15 +1198,16 @@ function recordOverduePayment(loanId, paymentDay) {
 let allUsers = [];
 let userToDelete = null;
 
-async function loadUsers() {
+async function loadUsers(page = 1) {
     try {
         showAlert('Loading users...', 'info');
         
-        const response = await apiCall('/admin/users');
+        const response = await apiCall(`/admin/users?page=${page}`);
         allUsers = response.users || [];
         
         updateUsersSummary(allUsers);
         displayUsers(allUsers);
+        displayPagination('users', response.total_pages, response.current_page);
         
         if (allUsers.length === 0) {
             showAlert('No users found. Add your first user!', 'info');
@@ -1802,13 +1852,13 @@ function printReport() {
     printWindow.print();
 }
 
-// Profile Management Functions
+// Borrower Profile Management Functions
 let currentProfile = null;
 let currentDocumentType = null;
 let cameraStream = null;
 
-function loadProfile() {
-    console.log('Loading profile...');
+function loadBorrowerProfiles() {
+    console.log('Loading borrower profiles...');
     loadBorrowersForProfile();
 }
 
@@ -2384,12 +2434,85 @@ function createLoanForBorrower(borrowerId) {
 }
 
 // Additional functions for loans interface
-function viewLoanDetails(loanId) {
-    showAlert('Loan details view will be implemented soon', 'info');
+async function viewLoanDetails(loanId) {
+    try {
+        const response = await apiCall(`/loans/${loanId}`);
+        const loan = response.loan;
+        const borrower = allBorrowersForLoans.find(b => b.id === loan.borrower_id);
+
+        const detailsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-user me-2"></i>Borrower Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>Name:</th><td>${borrower ? borrower.name : 'Unknown'}</td></tr>
+                        <tr><th>Phone:</th><td>${borrower ? borrower.phone : 'N/A'}</td></tr>
+                        <tr><th>Address:</th><td>${borrower ? borrower.address : 'N/A'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-handshake me-2"></i>Loan Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>ID:</th><td>${loan.id}</td></tr>
+                        <tr><th>Status:</th><td><span class="badge status-${loan.status}">${loan.status}</span></td></tr>
+                        <tr><th>Principal:</th><td>${formatCurrency(loan.principal_amount)}</td></tr>
+                        <tr><th>Interest:</th><td>${loan.interest_rate}% (${formatCurrency(loan.interest_amount)})</td></tr>
+                        <tr><th>Expenses:</th><td>${formatCurrency(loan.expenses)}</td></tr>
+                        <tr><th>Total:</th><td>${formatCurrency(loan.total_amount)}</td></tr>
+                        <tr><th>Outstanding:</th><td>${formatCurrency(loan.outstanding_balance)}</td></tr>
+                        <tr><th>Start Date:</th><td>${formatDate(loan.start_date)}</td></tr>
+                        <tr><th>End Date:</th><td>${formatDate(loan.expected_end_date)}</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('loanDetails').innerHTML = detailsHtml;
+
+        const modal = new bootstrap.Modal(document.getElementById('viewLoanModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Failed to load loan details:', error);
+        showAlert('Failed to load loan details: ' + error.message, 'danger');
+    }
 }
 
-function viewLoanSchedule(loanId) {
-    showAlert('Loan schedule view will be implemented soon', 'info');
+async function viewLoanSchedule(loanId) {
+    try {
+        const response = await apiCall(`/loans/${loanId}/schedule`);
+        const schedule = response.schedule;
+
+        const detailsHtml = `
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Date</th>
+                        <th>Expected Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${schedule.map(item => `
+                        <tr>
+                            <td>${item.day}</td>
+                            <td>${formatDate(item.date)}</td>
+                            <td>${formatCurrency(item.expected_amount)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        document.getElementById('loanScheduleDetails').innerHTML = detailsHtml;
+
+        const modal = new bootstrap.Modal(document.getElementById('viewLoanScheduleModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Failed to load loan schedule:', error);
+        showAlert('Failed to load loan schedule: ' + error.message, 'danger');
+    }
 }
 
 function recordLoanPayment(loanId) {
@@ -2418,6 +2541,22 @@ window.confirmDeleteBorrower = function() {
         originalConfirmDeleteBorrower();
     }
 };
+
+function displayPagination(section, totalPages, currentPage) {
+    const paginationContainer = document.getElementById(`${section}Pagination`);
+    if (!paginationContainer) return;
+
+    let paginationHtml = '<ul class="pagination">';
+    for (let i = 1; i <= totalPages; i++) {
+        paginationHtml += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="load${section.charAt(0).toUpperCase() + section.slice(1)}(${i})">${i}</a>
+            </li>
+        `;
+    }
+    paginationHtml += '</ul>';
+    paginationContainer.innerHTML = paginationHtml;
+}
 
 // Utility functions
 function formatCurrency(amount) {
@@ -2526,7 +2665,119 @@ function showFirstLoginNotification() {
     }, 30000);
 }
 
+async function loadSalaries() {
+    try {
+        showAlert('Loading salaries...', 'info');
+
+        const response = await apiCall('/salary/');
+        const salaries = response.salaries || [];
+
+        displaySalaries(salaries);
+
+        if (salaries.length === 0) {
+            showAlert('No salary calculations found.', 'info');
+        }
+
+    } catch (error) {
+        console.error('Failed to load salaries:', error);
+        showAlert('Failed to load salaries: ' + error.message, 'danger');
+        displaySalaries([]);
+    }
+}
+
+function displaySalaries(salaries) {
+    const tbody = document.getElementById('salaryTableBody');
+
+    if (!salaries || salaries.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-money-check-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No salary calculations found</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = salaries.map(salary => `
+        <tr>
+            <td>${salary.id}</td>
+            <td>${salary.user_id}</td>
+            <td>${salary.calculation_period}</td>
+            <td>${formatCurrency(salary.base_salary)}</td>
+            <td>${formatCurrency(salary.commission_amount)}</td>
+            <td>${formatCurrency(salary.total_salary)}</td>
+            <td>${formatDate(salary.created_at)}</td>
+        </tr>
+    `).join('');
+}
+
+async function loadSettings() {
+    try {
+        showAlert('Loading settings...', 'info');
+
+        const response = await apiCall('/admin/settings');
+        const settings = response.settings || [];
+
+        displaySettings(settings);
+
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+        showAlert('Failed to load settings: ' + error.message, 'danger');
+    }
+}
+
+function displaySettings(settings) {
+    const form = document.getElementById('settingsForm');
+    form.innerHTML = '';
+
+    settings.forEach(setting => {
+        const div = document.createElement('div');
+        div.className = 'mb-3';
+
+        let inputHtml = '';
+        if (setting.setting_key.includes('rate')) {
+            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}" step="0.01">`;
+        } else if (setting.setting_key.includes('duration')) {
+            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
+        } else {
+            inputHtml = `<input type="text" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
+        }
+
+        div.innerHTML = `
+            <label for="setting-${setting.setting_key}" class="form-label">${setting.description}</label>
+            ${inputHtml}
+        `;
+        form.appendChild(div);
+    });
+}
+
+async function saveSettings() {
+    try {
+        const form = document.getElementById('settingsForm');
+        const inputs = form.querySelectorAll('input');
+
+        const settings = [];
+        inputs.forEach(input => {
+            const key = input.id.replace('setting-', '');
+            const value = input.value;
+            settings.push({ setting_key: key, setting_value: value });
+        });
+
+        await apiCall('/admin/settings', {
+            method: 'POST',
+            body: JSON.stringify({ settings })
+        });
+
+        showAlert('Settings saved successfully!', 'success');
+
+    } catch (error) {
+        console.error('Failed to save settings:', error);
+        showAlert('Failed to save settings: ' + error.message, 'danger');
+    }
+}
+
 // Export functions for global access
 window.showSection = showSection;
 window.logout = logout;
-
