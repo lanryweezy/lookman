@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
 from loans import Loan
-from auth import account_officer_required
+from auth import account_officer_required, admin_required
 from datetime import datetime, date
 from decimal import Decimal
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -154,7 +154,6 @@ def get_payment(payment_id):
 
 @payments_bp.route('/<int:payment_id>', methods=['PUT'])
 @login_required
-@account_officer_required
 def update_payment(payment_id):
     """Update a payment"""
     try:
@@ -194,7 +193,7 @@ def update_payment(payment_id):
 
 @payments_bp.route('/<int:payment_id>', methods=['DELETE'])
 @login_required
-@account_officer_required
+@admin_required
 def delete_payment(payment_id):
     """Delete a payment"""
     try:
