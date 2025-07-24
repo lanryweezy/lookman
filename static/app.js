@@ -233,17 +233,55 @@ async function loadDashboardCharts() {
             }
         });
 
-        // Monthly Collections Chart
-        const monthlyCollectionsCtx = document.getElementById('monthlyCollectionsChart').getContext('2d');
-        new Chart(monthlyCollectionsCtx, {
+        // Loans by Purpose Chart
+        const loanPurposeResponse = await apiCall('/reports/loans-by-purpose');
+        const loanPurposeData = loanPurposeResponse.report;
+        const loanPurposeCtx = document.getElementById('loanPurposeChart').getContext('2d');
+        new Chart(loanPurposeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: loanPurposeData.labels,
+                datasets: [{
+                    label: 'Loans by Purpose',
+                    data: loanPurposeData.data,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        // Loaned vs. Collected Chart
+        const loanedVsCollectedCtx = document.getElementById('loanedVsCollectedChart').getContext('2d');
+        new Chart(loanedVsCollectedCtx, {
             type: 'bar',
             data: {
-                labels: ['This Month'],
+                labels: ['Total'],
                 datasets: [{
-                    label: 'Monthly Collections',
-                    data: [stats.month_collections],
-                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                    borderColor: 'rgba(153, 102, 255, 1)',
+                    label: 'Loaned',
+                    data: [stats.total_principal],
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Collected',
+                    data: [stats.total_collections],
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1
                 }]
             }
@@ -791,6 +829,9 @@ function displayLoans(loans) {
                         <button class="btn btn-outline-success" onclick="viewLoanSchedule(${loan.id})" title="Payment Schedule">
                             <i class="fas fa-calendar"></i>
                         </button>
+                        <button class="btn btn-outline-danger" onclick="deleteLoan(${loan.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
                         ${loan.status === 'active' ? `
                             <button class="btn btn-outline-warning" onclick="recordLoanPayment(${loan.id})" title="Record Payment">
                                 <i class="fas fa-credit-card"></i>
@@ -1210,7 +1251,8 @@ async function loadUsers(page = 1) {
     try {
         showAlert('Loading users...', 'info');
         
-        const response = await apiCall(`/admin/users?page=${page}`);
+        const searchTerm = document.getElementById('userSearch').value;
+        const response = await apiCall(`/admin/users?page=${page}&search=${searchTerm}`);
         allUsers = response.users || [];
         
         updateUsersSummary(allUsers);
@@ -2531,6 +2573,20 @@ function recordLoanPayment(loanId) {
     }, 500);
 }
 
+function deleteLoan(loanId) {
+    if (confirm('Are you sure you want to delete this loan?')) {
+        apiCall(`/loans/${loanId}`, { method: 'DELETE' })
+            .then(() => {
+                showAlert('Loan deleted successfully', 'success');
+                loadLoans();
+            })
+            .catch(error => {
+                console.error('Failed to delete loan:', error);
+                showAlert('Failed to delete loan: ' + error.message, 'danger');
+            });
+    }
+}
+
 // Additional functions for payments interface
 function editPayment(paymentId) {
     showAlert('Payment editing will be implemented soon', 'info');
@@ -2566,80 +2622,6 @@ function displayPagination(section, totalPages, currentPage) {
     paginationContainer.innerHTML = paginationHtml;
 }
 
-// Utility functions
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-NG', {
-        style: 'currency',
-        currency: 'NGN',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
-}
-
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-NG');
-}
-
-function formatDateTime(dateString) {
-    return new Date(dateString).toLocaleString('en-NG');
-}
-
-// Show alert message
-function showAlert(message, type = 'info') {
-    // Remove existing alerts
-    const existingAlerts = document.querySelectorAll('.alert-custom');
-    existingAlerts.forEach(alert => alert.remove());
-    
-    // Create new alert
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
-    alertDiv.style.position = 'fixed';
-    alertDiv.style.top = '80px';
-    alertDiv.style.right = '20px';
-    alertDiv.style.zIndex = '9999';
-    alertDiv.style.minWidth = '300px';
-    
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
-}
-
-// API helper function
-async function apiCall(endpoint, options = {}) {
-    const defaultOptions = {
-        credentials: 'include',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    };
-    
-    const finalOptions = { ...defaultOptions, ...options };
-    
-    try {
-        const response = await fetch(`${API_BASE}${endpoint}`, finalOptions);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'API call failed');
-        }
-        
-        return data;
-    } catch (error) {
-        console.error('API call error:', error);
-        throw error;
-    }
-}
-
 // Show first login notification
 function showFirstLoginNotification() {
     // Create a prominent notification for first login
@@ -2671,119 +2653,6 @@ function showFirstLoginNotification() {
             notificationDiv.remove();
         }
     }, 30000);
-}
-
-async function loadSalaries() {
-    try {
-        showAlert('Loading salaries...', 'info');
-
-        const response = await apiCall('/salary/');
-        const salaries = response.salaries || [];
-
-        displaySalaries(salaries);
-
-        if (salaries.length === 0) {
-            showAlert('No salary calculations found.', 'info');
-        }
-
-    } catch (error) {
-        console.error('Failed to load salaries:', error);
-        showAlert('Failed to load salaries: ' + error.message, 'danger');
-        displaySalaries([]);
-    }
-}
-
-function displaySalaries(salaries) {
-    const tbody = document.getElementById('salaryTableBody');
-
-    if (!salaries || salaries.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="text-center py-4">
-                    <i class="fas fa-money-check-alt fa-3x text-muted mb-3"></i>
-                    <p class="text-muted mb-0">No salary calculations found</p>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = salaries.map(salary => `
-        <tr>
-            <td>${salary.id}</td>
-            <td>${salary.user_id}</td>
-            <td>${salary.calculation_period}</td>
-            <td>${formatCurrency(salary.base_salary)}</td>
-            <td>${formatCurrency(salary.commission_amount)}</td>
-            <td>${formatCurrency(salary.total_salary)}</td>
-            <td>${formatDate(salary.created_at)}</td>
-        </tr>
-    `).join('');
-}
-
-async function loadSettings() {
-    try {
-        showAlert('Loading settings...', 'info');
-
-        const response = await apiCall('/admin/settings');
-        const settings = response.settings || [];
-
-        displaySettings(settings);
-
-    } catch (error) {
-        console.error('Failed to load settings:', error);
-        showAlert('Failed to load settings: ' + error.message, 'danger');
-    }
-}
-
-function displaySettings(settings) {
-    const form = document.getElementById('settingsForm');
-    form.innerHTML = '';
-
-    settings.forEach(setting => {
-        const div = document.createElement('div');
-        div.className = 'mb-3';
-
-        let inputHtml = '';
-        if (setting.setting_key.includes('rate')) {
-            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}" step="0.01">`;
-        } else if (setting.setting_key.includes('duration')) {
-            inputHtml = `<input type="number" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
-        } else {
-            inputHtml = `<input type="text" class="form-control" id="setting-${setting.setting_key}" value="${setting.setting_value}">`;
-        }
-
-        div.innerHTML = `
-            <label for="setting-${setting.setting_key}" class="form-label">${setting.description}</label>
-            ${inputHtml}
-        `;
-        form.appendChild(div);
-    });
-}
-
-async function saveSettings() {
-    try {
-        const form = document.getElementById('settingsForm');
-        const inputs = form.querySelectorAll('input');
-
-        const settings = [];
-        inputs.forEach(input => {
-            const key = input.id.replace('setting-', '');
-            const value = input.value;
-            settings.push({ setting_key: key, setting_value: value });
-        });
-
-        await apiCall('/admin/settings', {
-            method: 'POST',
-            body: JSON.stringify({ settings })
-        });
-
-        showAlert('Settings saved successfully!', 'success');
-
-    } catch (error) {
-        console.error('Failed to save settings:', error);
-        showAlert('Failed to save settings: ' + error.message, 'danger');
-    }
 }
 
 // Export functions for global access

@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from user import db
 from settings import SystemSetting
-from auth import account_officer_required
+from auth import account_officer_required, admin_required
 from datetime import datetime, date
 from decimal import Decimal
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -250,6 +250,27 @@ def update_loan_status(loan_id):
             'loan': loan_schema.dump(loan)
         }), 200
         
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@loans_bp.route('/<int:loan_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_loan(loan_id):
+    """Delete a loan"""
+    try:
+        loan = Loan.query.get_or_404(loan_id)
+
+        # Check permissions
+        if not current_user.is_admin():
+            return jsonify({'error': 'Access denied'}), 403
+
+        db.session.delete(loan)
+        db.session.commit()
+
+        return jsonify({'message': 'Loan deleted successfully'}), 200
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500

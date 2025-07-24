@@ -16,7 +16,19 @@ def get_users():
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
 
-        users = User.query.paginate(page=page, per_page=per_page)
+        query = User.query
+
+        # Search
+        search_term = request.args.get('search')
+        if search_term:
+            query = query.filter(
+                User.username.ilike(f'%{search_term}%') |
+                User.full_name.ilike(f'%{search_term}%') |
+                User.email.ilike(f'%{search_term}%') |
+                User.phone.ilike(f'%{search_term}%')
+            )
+
+        users = query.paginate(page=page, per_page=per_page)
         from user import UserSchema
         user_schema = UserSchema(many=True)
         return jsonify({
