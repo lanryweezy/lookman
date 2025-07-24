@@ -65,9 +65,10 @@ def create_borrower():
         )
         
         # Update optional fields
-        for field in data:
+        for field, value in data.items():
             if hasattr(new_borrower, field) and field not in ['name', 'created_by']:
-                setattr(new_borrower, field, data[field])
+                if value:
+                    setattr(new_borrower, field, value)
 
         db.session.add(new_borrower)
         db.session.commit()
