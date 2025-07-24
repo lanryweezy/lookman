@@ -419,7 +419,6 @@ async function saveBorrower() {
             phone: document.getElementById('borrowerPhone').value.trim(),
             address: document.getElementById('borrowerAddress').value.trim(),
             email: document.getElementById('borrowerEmail').value.trim(),
-            date_of_birth: document.getElementById('borrowerDateOfBirth').value,
             city: document.getElementById('borrowerCity').value.trim(),
             state: document.getElementById('borrowerState').value.trim(),
             marital_status: document.getElementById('borrowerMaritalStatus').value.trim(),
@@ -432,7 +431,6 @@ async function saveBorrower() {
             job_title: document.getElementById('borrowerJobTitle').value.trim(),
             work_address: document.getElementById('borrowerWorkAddress').value.trim(),
             monthly_income: document.getElementById('borrowerMonthlyIncome').value,
-            employment_start_date: document.getElementById('borrowerEmploymentStartDate').value,
             business_name: document.getElementById('borrowerBusinessName').value.trim(),
             business_registration_number: document.getElementById('borrowerBusinessRegistrationNumber').value.trim(),
             business_address: document.getElementById('borrowerBusinessAddress').value.trim(),
@@ -443,6 +441,16 @@ async function saveBorrower() {
             account_name: document.getElementById('borrowerAccountName').value.trim(),
             account_type: document.getElementById('borrowerAccountType').value.trim(),
         };
+
+        const dateOfBirth = document.getElementById('borrowerDateOfBirth').value;
+        if (dateOfBirth) {
+            borrowerData.date_of_birth = dateOfBirth;
+        }
+
+        const employmentStartDate = document.getElementById('borrowerEmploymentStartDate').value;
+        if (employmentStartDate) {
+            borrowerData.employment_start_date = employmentStartDate;
+        }
         
         const response = await apiCall('/borrowers', {
             method: 'POST',
