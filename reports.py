@@ -29,7 +29,7 @@ def daily_collections_report():
         # Filter by user role if not admin
         if not current_user.is_admin():
             payments_query = payments_query.join(Loan).filter(Loan.account_officer_id == current_user.id)
-        
+
         payments_data = payments_query.all()
         
         # Get user details for officer names
@@ -144,18 +144,18 @@ def profit_loss_report():
         
         if not start_date_str or not end_date_str:
             return jsonify({'error': 'Start date and end date are required'}), 400
-        
+
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        
+
         # Revenue calculation
         loans_in_period = Loan.query.filter(Loan.start_date.between(start_date, end_date)).all()
-        
+
         principal_disbursed = sum(loan.principal_amount for loan in loans_in_period)
         interest_income = sum(loan.interest_amount for loan in loans_in_period)
         fee_income = sum(loan.expenses for loan in loans_in_period)
         gross_revenue = interest_income + fee_income
-        
+
         revenue = {
             'principal_disbursed': float(principal_disbursed),
             'interest_income': float(interest_income),
@@ -166,22 +166,22 @@ def profit_loss_report():
         # Expenses calculation (mock for now)
         salary_expenses = 0 # Placeholder for salary expenses
         total_expenses = salary_expenses
-        
+
         expenses = {
             'salary_expenses': float(salary_expenses),
             'total_expenses': float(total_expenses)
         }
-        
+
         # Profit calculation
         net_profit = gross_revenue - total_expenses
         profit_margin = (net_profit / gross_revenue * 100) if gross_revenue > 0 else 0
-        
+
         profit = {
             'gross_profit': float(gross_revenue),
             'net_profit': float(net_profit),
             'profit_margin': profit_margin
         }
-        
+
         return jsonify({
             'report': {
                 'title': 'Profit & Loss Report',
@@ -189,6 +189,38 @@ def profit_loss_report():
                 'revenue': revenue,
                 'expenses': expenses,
                 'profit': profit
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@reports_bp.route('/loans-by-purpose', methods=['GET'])
+@login_required
+def loans_by_purpose_report():
+    """
+    Report for loans by purpose.
+    """
+    try:
+        query = db.session.query(
+            Loan.loan_purpose,
+            func.count(Loan.id).label('loan_count')
+        ).group_by(Loan.loan_purpose)
+
+        # Filter by user role if not admin
+        if not current_user.is_admin():
+            query = query.filter(Loan.account_officer_id == current_user.id)
+
+        data = query.all()
+
+        labels = [item[0] for item in data]
+        values = [item[1] for item in data]
+
+        return jsonify({
+            'report': {
+                'title': 'Loans by Purpose',
+                'labels': labels,
+                'data': values
             }
         }), 200
         
@@ -209,7 +241,7 @@ def performance_report():
         query = User.query.filter_by(role='account_officer')
         if user_id:
             query = query.filter_by(id=user_id)
-        
+
         users = query.all()
         
         performance_data = []
